@@ -1,28 +1,54 @@
+from pynput import keyboard
 import pybullet as p
 import time
 import pybullet_data
 import os
 
-physicsClient = p.connect(p.GUI)#or p.DIRECT for non-graphical version
-p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+# Define a flag variable
+exit_simulation = False
+
+# Define the key press callback function
+def on_press(key):
+    global exit_simulation
+    try:
+        if key.char == 'q':
+            exit_simulation = True
+    except AttributeError:
+        pass
+
+# Start listening for key presses
+listener = keyboard.Listener(on_press=on_press)
+listener.start()
+
+physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version
+p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
 p.setGravity(0,0,-10)
 planeId = p.loadURDF("plane.urdf")
-startPos = [0,0,0]
-startOrientation = p.getQuaternionFromEuler([0,0,0])
 
-# Add the directory containing the missing file to the URDF search path
-# p.setAdditionalSearchPath('/home/vignesh/Documents/Research/Spring2023/sim_test/meshes')
+# Assume URDF files are in the same directory
 urdf_path = 'xarm7_with_gripper.urdf'
 urdf_dir = os.path.dirname(urdf_path)
 p.setAdditionalSearchPath(urdf_dir)
 
-boxId = p.loadURDF(urdf_path, startPos, startOrientation)
+startPos_arm = [0,0,0]
+startOrientation_arm = p.getQuaternionFromEuler([0,0,0])
+armId = p.loadURDF(urdf_path, startPos_arm, startOrientation_arm)
 
-#set the center of mass frame (loadURDF sets base link frame) startPos/Ornp.resetBasePositionAndOrientation(boxId, startPos, startOrientation)
-for i in range (10000):
+# Load table
+startPos_table = [1,0,0]  # adjust position as needed
+tableId = p.loadURDF("table.urdf", startPos_table)
+
+# Load pan
+startPos_pan = [1,0.5,1]  # adjust position as needed
+panId = p.loadURDF("pan.urdf", startPos_pan)
+
+# Load spatula
+startPos_spatula = [1,-0.5,1]  # adjust position as needed
+spatulaId = p.loadURDF("spatula.urdf", startPos_spatula)
+
+while not exit_simulation:
     p.stepSimulation()
     time.sleep(1./240.)
 
-cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)
-print(cubePos,cubeOrn)
 p.disconnect()
+listener.stop()
